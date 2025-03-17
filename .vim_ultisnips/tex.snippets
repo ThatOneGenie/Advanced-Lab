@@ -1,0 +1,527 @@
+global !p
+def math():
+	return vim.eval('vimtex#syntax#in_mathzone()') == '1'
+
+def comment(): 
+	return vim.eval('vimtex#syntax#in_comment()') == '1'
+
+def env(name):
+	[x,y] = vim.eval("vimtex#env#is_inside('" + name + "')") 
+	return x != '0' and y != '0'
+
+endglobal
+
+snippet template "Basic template" b
+\documentclass[a4paper]{${1:article}}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\usepackage{amsmath, amssymb}
+\usepackage[${2:at}]{easylist}
+\usepackage{soul}
+
+\pdfsuppresswarningpagegroup=1
+
+\begin{document}
+\title{$3}
+\date{$4}
+\author{$5}
+\maketitle
+	$0
+\end{document}
+endsnippet
+
+snippet beg "begin{} / end{}" bA
+\\begin{$1}
+	$0
+\\end{$1}
+endsnippet
+
+priority 100
+snippet ... "ldots" iA
+\ldots
+endsnippet
+
+snippet table "Table environment" b
+\begin{table}[${1:htpb}]
+	\centering
+	\caption{${2:caption}}
+	\label{tab:${3:label}}
+	\begin{tabular}{${5:c}}
+	$0${5/((?<=.)c|l|r)|./(?1: & )/g}
+	\end{tabular}
+\end{table}
+endsnippet
+
+snippet fig "Figure environment" b
+\begin{figure}[${1:htpb}]
+	\centering
+	${2:\includegraphics[width=0.8\textwidth]{$3}}
+	\caption{${4:$3}}
+	\label{fig:${5:${3/\W+/-/g}}}
+\end{figure}
+endsnippet
+
+snippet enum "Enumerate" bA
+\begin{enumerate}
+	\item $0
+\end{enumerate}
+endsnippet
+
+snippet item "Itemize" bA
+\begin{itemize}
+	\item $0
+\end{itemize}
+endsnippet
+
+snippet desc "Description" b
+\begin{description}
+	\item[$1] $0
+\end{description}
+endsnippet
+
+snippet pac "Package" b
+\usepackage[${1:options}]{${2:package}}$0
+endsnippet
+
+snippet => "implies" Ai
+\implies
+endsnippet
+
+snippet =< "implied by" Ai
+\impliedby
+endsnippet
+
+context "math()"
+snippet iff "iff" Ai
+\iff
+endsnippet
+
+snippet mk "Math" wA
+$${1}$`!p
+if t[2] and t[2][0] not in [',', '.', '?', '-', ' ']:
+	snip.rv = ' '
+else:
+	snip.rv = ''
+`$2
+endsnippet
+
+snippet dm "equation*" wA
+\[
+${1:${VISUAL}}
+.\] $0
+endsnippet
+
+snippet eqn "equation" wA
+\begin{equation}
+${1:${VISUAL}}
+\end{equation}
+$0
+endsnippet
+
+snippet gt "gather" wA
+\begin{gather}
+${1:${VISUAL}}
+\end{gather}
+$0
+endsnippet
+
+snippet ali "Align" bA
+\begin{align*}
+	${1:${VISUAL}}
+.\end{align*}
+endsnippet
+
+
+context "math()"
+snippet // "Fraction" iA
+\\frac{$1}{$2}$0
+endsnippet
+
+snippet / "Fraction" i
+\\frac{${VISUAL}}{$1}$0
+endsnippet
+
+context "math()"
+snippet '((\d+)|(\d*)(\\)?([A-Za-z]+)((\^|_)(\{\d+\}|\d))*)/' "symbol frac" wrA
+\\frac{`!p snip.rv = match.group(1)`}{$1}$0
+endsnippet
+
+priority 1000
+context "math()"
+snippet '^.*\)/' "() frac" wrA
+`!p
+stripped = match.string[:-1]
+depth = 0
+i = len(stripped) - 1
+while True:
+	if stripped[i] == ')': depth += 1
+	if stripped[i] == '(': depth -= 1
+	if depth == 0: break;
+	i-=1
+snip.rv = stripped[0:i] + "\\frac{" + stripped[i+1:-1] + "}"
+`{$1}$0
+endsnippet
+
+context "math()"
+snippet '([A-Za-z])(\d)' "auto subscript" wrA
+`!p snip.rv = match.group(1)`_`!p snip.rv = match.group(2)`
+endsnippet
+
+context "math()"
+snippet '([A-Za-z])_(\d\d)' "auto subscript2" wrA
+`!p snip.rv = match.group(1)`_{`!p snip.rv = match.group(2)`}
+endsnippet
+
+snippet sympy "sympyblock " w
+sympy $1 sympy$0
+endsnippet
+
+priority 10000
+snippet 'sympy(.*)sympy' "sympy" wr
+`!p
+from sympy import *
+x, y, z, t = symbols('x y z t')
+k, m, n = symbols('k m n', integer=True)
+f, g, h = symbols('f g h', cls=Function)
+init_printing()
+snip.rv = eval('latex(' + match.group(1).replace('\\', '').replace('^', '**').replace('{', '(').replace('}', ')') + ')')
+`
+endsnippet
+
+priority 1000
+snippet math "mathematicablock" w
+math $1 math$0
+endsnippet
+
+priority 10000
+snippet 'math(.*)math' "math" wr
+`!p
+import subprocess
+code = match.group(1)
+code = 'ToString[' + code + ', TeXForm]'
+snip.rv = subprocess.check_output(['wolframscript', '-code', code])
+`
+endsnippet
+
+snippet == "equals" iA
+&= $1 \\\\
+endsnippet
+
+snippet != "equals" iA
+\neq 
+endsnippet
+
+context "math()"
+snippet ceil "ceil" iA
+\left\lceil $1 \right\rceil $0
+endsnippet
+
+context "math()"
+snippet floor "floor" iA
+\left\lfloor $1 \right\rfloor$0
+endsnippet
+
+snippet pmat "pmat" iA
+\begin{pmatrix} $1 \end{pmatrix} $0
+endsnippet
+
+snippet bmat "bmat" iA
+\begin{bmatrix} $1 \end{bmatrix} $0
+endsnippet
+
+context "math()"
+snippet grad "gradient" i
+\nabla 
+endsnippet
+
+context "math()"
+snippet () "left( right)" iA
+\left( ${1:${VISUAL}} \right) $0
+endsnippet
+
+snippet lr "left( right)" i
+\left( ${1:${VISUAL}} \right) $0
+endsnippet
+
+snippet lr( "left( right)" i
+\left( ${1:${VISUAL}} \right) $0
+endsnippet
+
+snippet lr| "left| right|" i
+\left| ${1:${VISUAL}} \right| $0
+endsnippet
+
+snippet lr{ "left\{ right\}" i
+\left\\{ ${1:${VISUAL}} \right\\} $0
+endsnippet
+
+snippet lrb "left\{ right\}" i
+\left\\{ ${1:${VISUAL}} \right\\} $0
+endsnippet
+
+snippet lr[ "left[ right]" i
+\left[ ${1:${VISUAL}} \right] $0
+endsnippet
+
+context "math()"
+snippet <> "vector brackets" iA
+\langle ${1:${VISUAL}} \rangle $0
+endsnippet
+
+snippet lr< "left< right>" i
+\langle ${1:${VISUAL}} \rangle $0
+endsnippet
+
+priority 10
+context "math()"
+snippet "oline" "bar" riA
+\overline{$1}$0
+endsnippet
+
+priority 10
+context "math()"
+snippet "([a-zA-Z])bar" "bar" riA
+\overline{`!p snip.rv=match.group(1)`}
+endsnippet
+
+snippet conj "conjugate" i
+\left[ ${1:${VISUAL}}, $2 \right] $0
+endsnippet
+
+snippet taylor "taylor" w
+\sum_{${1:k}=${2:0}}^{${3:\infty}} ${4:c_$1} (x-a)^$1 $0
+endsnippet
+
+snippet lim "limit" w
+\lim_{${1:n} \to ${2:\infty}} 
+endsnippet
+
+snippet sum "sum" w
+\sum_{n=${1:1}}^{${2:\infty}} ${3:a_n z^n}
+endsnippet
+
+snippet limsup "limsup" w
+\limsup_{${1:n} \to ${2:\infty}} 
+endsnippet
+
+snippet prod "product" w
+\prod_{${1:n=${2:1}}}^{${3:\infty}} ${4:${VISUAL}} $0
+endsnippet
+
+context "math()"
+snippet sr "\sqrt{}" iA
+\sqrt{${1:${VISUAL}}} $0
+endsnippet
+
+context "math()"
+snippet sq "^2" iA
+^2
+endsnippet
+
+context "math()"
+snippet cb "^3" iA
+^3
+endsnippet
+
+context "math()"
+snippet td "to the ... power" iA
+^{$1}$0
+endsnippet
+
+context "math()"
+snippet rd "to the ... power" iA
+^{($1)}$0
+endsnippet
+
+snippet __ "subscript" iA
+_{$1}$0
+endsnippet
+
+snippet inf "\infty" i
+\infty
+endsnippet
+
+snippet <= "leq" iA
+\le 
+endsnippet
+
+snippet >= "geq" iA
+\ge 
+endsnippet
+
+context "math()"
+snippet EE "exists" iA
+\exists 
+endsnippet
+
+context "math()"
+snippet AA "forall" iA
+\forall 
+endsnippet
+
+context "math()"
+snippet abs "absolute value" i
+|${1:${VISUAL}}|$0
+endsnippet
+
+context "math()"
+snippet 2x2 "2x2 matrix"
+\begin{matrix} $1 & $2\\
+$3 & $4 \end{matrix} $0
+endsnippet
+
+context "math()"
+snippet 3x3 "3x3 matrix"
+\begin{matrix} $1 & $2 & $3\\
+$4 & $5 & $6 \end{matrix} $0
+endsnippet
+
+context "math()"
+snippet  "vec" "vector" riA
+\vec{${1:${VISUAL}}}$0
+endsnippet
+
+snippet mat2 "2x2 matrix" iA
+\begin{pmatrix} $1 & $2\\\
+$3 & $4 \end{pmatrix} $0
+endsnippet
+
+snippet mat3 "3x3 matrix" iA
+\begin{pmatrix} $1 & $2 & $3i\\\
+$4 & $5 & $6 \\\
+$7 & $8 & $9 \end{pmatrix} $0
+endsnippet
+
+priority 300
+context "math()"
+snippet dint "integral" wA
+\int_{${1:-\infty}}^{${2:\infty}} ${3:${VISUAL}} $0
+endsnippet
+
+priority 200
+context "math()"
+snippet '(?<!\\)(arcsin|arccos|arctan|arccot|arccsc|arcsec|pi|zeta|int)' "ln" rwA
+\\`!p snip.rv = match.group(1)`
+endsnippet
+
+priority 100
+context "math()"
+snippet psiv "psi" i
+\psi(${1:${VISUAL}}) $0
+endsnippet
+
+priority 100
+context "math()"
+snippet hbar "hbar" iA
+\hslash
+endsnippet
+
+context "math()"
+snippet del "del" i
+\nabla
+endsnippet
+
+context "math()"
+snippet grad "grad" iA
+\nabla
+endsnippet
+
+context "math()"
+snippet dot "dot product" iA
+\cdot
+endsnippet
+
+context "math()"
+snippet part "d/dx" i
+\frac{\partial ${1:V}}{\partial ${2:x}} $0
+endsnippet
+
+priority 10
+snippet '(?<!\\)(alpha|beta|chi|delta|gamma|iota|kappa|lambda|mu|nu|omega|phi|rho)' "greek" rw
+\\`!p snip.rv = match.group(1)`
+endsnippet
+
+priority 10
+snippet '(?<!\\)(sigma|tau|theta|upsilon|xi|zeta|Delta|Gamma|Lambda|Omega|Phi|Pi|Psi)' "greek" rw
+\\`!p snip.rv = match.group(1)`
+endsnippet
+
+priority 10
+snippet '(?<!\\)(Sigma|Theta|Upsilon|Xi|psi)' "greek" rw
+\\`!p snip.rv = match.group(1)`
+endsnippet
+
+context "math()"
+snippet -> "right arrow" iA
+\rightarrow
+endsnippet
+
+snippet vareps "epsilon" iA
+\varepsilon
+endsnippet
+
+
+
+
+# Note Taking Helpers
+snippet sect "section" bA
+\section{${1:${VISUAL}}} 
+$0
+endsnippet
+
+snippet subsec	"subsection" bA
+\subsection{${1:${VISUAL}}} 
+$0
+endsnippet
+
+snippet para "paragraph" bA
+\paragraph{${1:${VISUAL}}} 
+$0
+endsnippet
+
+snippet chapt "chapter" bA
+\chapter{${1:${VISUAL}}}
+$0
+endsnippet
+
+snippet newrow "newrow" iA
+${1:${VISUAL}} & $2 & $3 \\\ \hline
+$0
+endsnippet
+
+snippet bold "bold" i
+\textbf{${1:${VISUAL}}}$0
+endsnippet
+
+snippet ital "italic" i
+\textit{${1:${VISUAL}}}$0
+endsnippet
+
+snippet ul "underline" i 
+\ul{${1:${VISUAL}}}$0
+endsnippet
+
+#Purely Quantum Snippets
+context "math()"
+snippet 1dschro "1d-Schrodinger" A
+${1|<-\frac{\hslash^2}{2m}\frac{\partial^2 \psi}{\partial x^2}=i\hslash\frac{\partial \psi}{\partial t}, -\frac{\hslash^2}{2m}\frac{\partial^2 \psi(x\,t)}{\partial x^2}=i\hslash\frac{\partial \psi(x\,t)}{\partial t}, >-\frac{\hslash^2}{2m} \frac{\partial^2}{\partial x^2} \psi(x\,t) = i\hslash\frac{\partial }{\partial t} \psi(x\,t)|}$0
+endsnippet
+
+context "math()"
+snippet bra "bra" i
+\langle ${1:${VISUAL}} \rvert $0
+endsnippet
+
+context "math()"
+snippet ket "ket" i
+\lvert ${1:${VISUAL}} \rangle $0
+endsnippet
+
+context "math()"
+snippet colve "column vector" iA
+\left[\begin{smallmatrix} ${1:${VISUAL}} \end{smallmatrix}\right] $0
+endsnippet
+
+# vim:ft=snippets
